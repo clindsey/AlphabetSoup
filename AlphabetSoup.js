@@ -6,29 +6,35 @@
     })
 
     var AlphabetSoup = function() {
-        this.init()
-
         this.buildAlphabet()
+
+        this.initPersistance()
     }
 
-    AlphabetSoup.prototype.init = function() {
+    AlphabetSoup.prototype.initPersistance = function() {
         this.firebase = new Firebase('https://errmano.firebaseio-demo.com/v1/')
 
         var self = this
 
-        this.firebase.once('value', function() { self.onAlphabetPositions.apply(self, Array.prototype.slice.call(arguments)) })
+        this.firebase.once('value', function() { self.onAllLetterPositions.apply(self, Array.prototype.slice.call(arguments))  })
         this.firebase.on('child_changed', function() { self.onLetterPosition.apply(self, Array.prototype.slice.call(arguments)) })
     }
 
-    AlphabetSoup.prototype.onAlphabetPositions = function(lettersSnapshot) {
-        var lettersList = lettersSnapshot.val()
+    AlphabetSoup.prototype.onLetterPosition = function(letterSnapshot) {
+        this.setLetterPosition(letterSnapshot.name(), letterSnapshot.val())
+    }
 
+    AlphabetSoup.prototype.onAllLetterPositions = function(allLettersSnapshot) {
+        this.setAlphabetPositions(allLettersSnapshot.val())
+    }
+
+    AlphabetSoup.prototype.sendLetterPosition = function(letterId, letter) {
+        this.firebase.child(letterId).set(letter)
+    }
+
+    AlphabetSoup.prototype.setAlphabetPositions = function(lettersList) {
         for(var letterId in lettersList){
             var letter = lettersList[letterId]
-
-            if(letter.zIndex > this.maxLetterZIndex){
-                this.maxLetterZIndex = letter.zIndex
-            }
 
             jQuery('#' + letterId).css({
                     'top': letter.posTop,
@@ -39,24 +45,19 @@
         }
     }
 
-    AlphabetSoup.prototype.onLetterPosition = function(letterSnapshot) {
-        var letterId = letterSnapshot.name()
-          , letter = letterSnapshot.val()
-
-        if(letter.zIndex > this.maxLetterZIndex){
-            this.maxLetterZIndex = letter.zIndex
-        }
-
+    AlphabetSoup.prototype.setLetterPosition = function(letterId, letter) {
         jQuery('#' + letterId)
             .css('z-index', letter.zIndex)
             .animate({
                     'top': letter.posTop,
                     'left': letter.posLeft
                 })
+
+        this.letterToTop(letterId)
     }
 
     AlphabetSoup.prototype.buildAlphabet = function() {
-        this.maxLetterZIndex = 0
+        this.alphabetLetters = []
 
         var $alphabetBoard = jQuery('#alphabet-letter-container')
 
@@ -64,14 +65,17 @@
 
         for(var y = 0, yl = 6; y < yl; y += 1){
             for(var x = 0, xl = 26; x < xl; x += 1){
-                var letter = String.fromCharCode(97 + x)
-                  , letterId = 'alphabet-letter-' + (y * xl + x)
+                var index = y * xl + x
+                  , letter = String.fromCharCode(97 + x)
+                  , letterId = 'alphabet-letter-' + index
                   , letterHtml = jQuery.tmpl('letterTemplate', {
                             'letter': letter,
                             'id': letterId
                         })
 
                 $alphabetBoard.append(letterHtml)
+
+                this.alphabetLetters[index] = letterId
 
                 var letterBackgroundColor = (Math.round(0xFFFFFF * Math.random()).toString(16) + "000000").replace(/([a-f0-9]{6}).+/, "#$1")
                   , letterPosLeft = x * 30 + 10
@@ -81,11 +85,9 @@
                         'id': letterId,
                         'top': letterPosTop,
                         'left': letterPosLeft,
-                        'zIndex': this.maxLetterZIndex,
+                        'zIndex': index,
                         'background-color': letterBackgroundColor
                     })
-
-                this.maxLetterZIndex += 1
             }
         }
 
@@ -98,15 +100,13 @@
             })
     }
 
-    AlphabetSoup.prototype.letterDragStart = function(Event, ui) {
+    AlphabetSoup.prototype.letterDragStart = function(_event, ui) {
         var $letter = ui.helper
 
-        this.maxLetterZIndex += 1
-
-        $letter.css('z-index', this.maxLetterZIndex)
+        this.letterToTop($letter.attr('id'))
     }
 
-    AlphabetSoup.prototype.letterDragStop = function(Event, ui) {
+    AlphabetSoup.prototype.letterDragStop = function(_event, ui) {
         var $letter = ui.helper
           , letter = {}
           , letterId = $letter.attr('id')
@@ -116,7 +116,31 @@
         letter.posTop = $letter.css('top')
         letter.zIndex = $letter.css('z-index')
 
-        this.firebase.child(letterId).set(letter)
+        this.sendLetterPosition(letterId, letter)
+    }
+
+    AlphabetSoup.prototype.letterToTop = function(letterId) {
+        var lettersToAdjust = []
+          , newAlphabetLetters = []
+
+        for(var i = 0, il = this.alphabetLetters.length; i < il; i += 1){
+            if(this.alphabetLetters[i] === letterId){
+                lettersToAdjust = this.alphabetLetters.slice(i)
+
+                break
+            } else{
+                newAlphabetLetters.push(this.alphabetLetters[i])
+            }
+        }
+
+        var letterToBringToTop = lettersToAdjust.shift()
+        jQuery('#' + letterToBringToTop).css('z-index', this.alphabetLetters.length - 1)
+
+        for(i = 0, il = lettersToAdjust.length; i < il; i += 1){
+            newAlphabetLetters.push(lettersToAdjust[i])
+
+            jQuery('#' + lettersToAdjust[i]).css('z-index', lettersToAdjust.length - 1)
+        }
     }
 
     // populates the server with some data
@@ -131,7 +155,7 @@
                   , letterPosLeft = x * 30 + 10
                   , letterPosTop = y * 30 + 10
 
-                var letterRecord = {
+                var letter = {
                         'posLeft': letterPosLeft,
                         'posTop': letterPosTop,
                         'backgroundColor': letterBackgroundColor,
@@ -140,7 +164,7 @@
 
                 letterZIndex += 1
 
-                this.firebase.child(letterId).set(letterRecord)
+                this.sendLetterPosition(letterId, letter)
             }
         }
     }
