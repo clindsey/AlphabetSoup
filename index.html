@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Alphabet Soup - firebase</title>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+        <script src="http://ajax.aspnetcdn.com/ajax/jquery.templates/beta1/jquery.tmpl.js"></script>
+        <script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
+        <script src="https://cdn.firebase.com/v0/firebase.js"></script>
+        <script src="AlphabetSoup.js"></script>
+
+        <style type="text/css">
+            body {
+                font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+                font-weight: 300;
+            }
+
+            .page-container {
+                width: 800px;
+                margin: 0 auto;
+            }
+
+            .alphabet-board {
+                position: relative;
+                width: 800px;
+                height: 600px;
+                background-color: #e1e1e1;
+            }
+
+            .alphabet-letter {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 20px;
+                height: 20px;
+                background-color: #800;
+                color: #fff;
+                text-shadow: 1px 1px 0 #000;
+                text-align: center;
+                text-transform: uppercase;
+                line-height: 20px;
+                cursor: pointer;
+                box-shadow: 1px 1px 0 #000;
+                z-index: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page-container">
+            <h1>alphabet soup</h1>
+            <p>shared multi user board with draggable letters</p>
+            <div id="alphabet-letter-container" class="alphabet-board">
+                <script id="alphabet-letter-template" type="text/html">
+                    <span id="${id}" class="alphabet-letter">${letter}</span>
+                </script>
+            </div>
+            <p>Made with <a href="http://firebase.com/">firebase</a></p>
+            <p>Get the source on <a href="http://github.com/clindsey/AlphabetSoup/">github</a></p>
+        </div>
+    </body>
+</html>
